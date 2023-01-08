@@ -11,7 +11,8 @@ import {
   StartContdownButton,
   TaskInput,
 } from './styles'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import {differenceInSeconds} from 'date-fns'
 
 // Definindo o esquema de validação do form
 const newCycleFormValidationSchema = zod.object({
@@ -26,11 +27,14 @@ interface Cycle {
   id: string
   task: string
   minutesAmount: number
+  startDate:Date
 }
 
 export function Home() {
   const [cycles, setCycles] = useState<Cycle[]>([])
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
+  const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
+
 
   const { register, handleSubmit, watch, reset } = useForm<NewCycleFormData>({
     resolver: zodResolver(newCycleFormValidationSchema),
@@ -45,18 +49,56 @@ export function Home() {
       id: String(new Date().getTime()),
       minutesAmount: data.minutesAmount,
       task: data.task,
+      startDate: new Date()
     }
     setCycles((state) => [...state, newCycle])
     setActiveCycleId(newCycle.id)
     reset()
+    setAmountSecondsPassed(0)
   }
 
   // Resgatando o ciclo ativo
   const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
   console.log(activeCycle)
 
+  //Resgatando total de segundos do ciclo ativo
+  const totalSeconds = activeCycle ? activeCycle.minutesAmount*60 : 0;
+  //Tempo atual
+  const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0;
+  //Calculando minutos e segundos
+  const minutesAmount = Math.floor(currentSeconds/60)
+  const secondsAmount = currentSeconds % 60
+  //Formatando minutos e segundos para mostrar em tela
+  const minutes = String(minutesAmount).padStart(2,'0') //Retorna a string com duas casas, se não tiver completa com 0 no final
+  const seconds = String(secondsAmount).padStart(2,'0')
+  console.log(minutes)
+  console.log(seconds)
+
   const task = watch('task') // Para monitorar o campo task, utilizado para habilitar e dezabilitar o botão começar
   const isSubmitDesable = !task
+
+  //Iniciando Contador
+  useEffect(()=>{
+    let interval:number
+    if(activeCycle){
+      interval = setInterval(()=>{
+        setAmountSecondsPassed(differenceInSeconds(new Date(), activeCycle.startDate))
+      },1000)
+    }
+
+    //Limpa a useEffect anterior
+    return ()=>{
+      clearInterval(interval);
+    }
+  },[activeCycle])
+
+  //Atualizando Título
+  useEffect(()=>{
+    if(activeCycle){
+      document.title = `${minutes}:${seconds} - ${activeCycle.task}`
+    }
+  },[minutes, seconds, activeCycle])
+
   return (
     <HomeContainer>
       <form action="" onSubmit={handleSubmit(handleCreatenewCycle)}>
@@ -88,11 +130,11 @@ export function Home() {
           <span>minutos</span>
         </FormContainer>
         <CountdownContainer>
-          <span>0</span>
-          <span>0</span>
+          <span>{minutes[0]}</span>
+          <span>{minutes[1]}</span>
           <Separator>:</Separator>
-          <span>0</span>
-          <span>0</span>
+          <span>{seconds[0]}</span>
+          <span>{seconds[1]}</span>
         </CountdownContainer>
         <StartContdownButton type="submit" disabled={isSubmitDesable}>
           <Play size={24} />
