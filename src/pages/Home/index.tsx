@@ -11,20 +11,50 @@ import {
   StartContdownButton,
   TaskInput,
 } from './styles'
+import { useState } from 'react'
 
+// Definindo o esquema de validação do form
 const newCycleFormValidationSchema = zod.object({
   task: zod.string().min(1, 'Informe a tarefa'),
   minutesAmount: zod.number().min(5).max(60),
 })
 
+// Extraindo interface a partir do esquema de validação
+type NewCycleFormData = zod.infer<typeof newCycleFormValidationSchema>
+
+interface Cycle {
+  id: string
+  task: string
+  minutesAmount: number
+}
+
 export function Home() {
-  const { register, handleSubmit, watch, formState } = useForm({
+  const [cycles, setCycles] = useState<Cycle[]>([])
+  const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
+
+  const { register, handleSubmit, watch, reset } = useForm<NewCycleFormData>({
     resolver: zodResolver(newCycleFormValidationSchema),
+    defaultValues: {
+      task: '',
+      minutesAmount: 0,
+    },
   })
 
-  console.log(formState)
+  function handleCreatenewCycle(data: NewCycleFormData) {
+    const newCycle: Cycle = {
+      id: String(new Date().getTime()),
+      minutesAmount: data.minutesAmount,
+      task: data.task,
+    }
+    setCycles((state) => [...state, newCycle])
+    setActiveCycleId(newCycle.id)
+    reset()
+  }
 
-  function handleCreatenewCycle(data: any) {}
+  // Resgatando o ciclo ativo
+  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
+  console.log(activeCycle)
+
   const task = watch('task') // Para monitorar o campo task, utilizado para habilitar e dezabilitar o botão começar
   const isSubmitDesable = !task
   return (
