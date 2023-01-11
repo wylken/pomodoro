@@ -18,7 +18,7 @@ import { differenceInSeconds } from 'date-fns'
 // Definindo o esquema de validação do form
 const newCycleFormValidationSchema = zod.object({
   task: zod.string().min(1, 'Informe a tarefa'),
-  minutesAmount: zod.number().min(5).max(60),
+  minutesAmount: zod.number().min(1).max(60),
 })
 
 // Extraindo interface a partir do esquema de validação
@@ -30,6 +30,7 @@ interface Cycle {
   minutesAmount: number
   startDate: Date
   interruptedDate?: Date // Opcional
+  finishedDate?: Date // Opcional
 }
 
 export function Home() {
@@ -61,9 +62,9 @@ export function Home() {
 
   // Função para interromper um ciclo
   function handleInterruptCycle() {
-    setCycles(
+    setCycles((state) =>
       // Atualizando cycle dentro do array
-      cycles.map((cycle) => {
+      state.map((cycle) => {
         if (cycle.id === activeCycleId) {
           return { ...cycle, interruptedDate: new Date() }
         } else {
@@ -89,7 +90,6 @@ export function Home() {
   const seconds = String(secondsAmount).padStart(2, '0')
   console.log(minutes)
   console.log(seconds)
-
   const task = watch('task') // Para monitorar o campo task, utilizado para habilitar e dezabilitar o botão começar
   const isSubmitDesable = !task
 
@@ -98,9 +98,27 @@ export function Home() {
     let interval: number
     if (activeCycle) {
       interval = setInterval(() => {
-        setAmountSecondsPassed(
-          differenceInSeconds(new Date(), activeCycle.startDate),
+        const secondsDifference = differenceInSeconds(
+          new Date(),
+          activeCycle.startDate,
         )
+        if (secondsDifference >= totalSeconds) {
+          setCycles((state) =>
+            // Atualizando cycle dentro do array
+            state.map((cycle) => {
+              if (cycle.id === activeCycleId) {
+                return { ...cycle, finishedDate: new Date() }
+              } else {
+                return cycle
+              }
+            }),
+          )
+          setAmountSecondsPassed(secondsDifference)
+          setActiveCycleId(null)
+          clearInterval(interval)
+        } else {
+          setAmountSecondsPassed(secondsDifference)
+        }
       }, 1000)
     }
 
@@ -108,7 +126,7 @@ export function Home() {
     return () => {
       clearInterval(interval)
     }
-  }, [activeCycle])
+  }, [activeCycle, totalSeconds, activeCycleId])
 
   // Atualizando Título
   useEffect(() => {
@@ -141,7 +159,7 @@ export function Home() {
             id="minutesAmount"
             placeholder="00"
             step={5}
-            min={5}
+            min={1}
             max={60}
             disabled={!!activeCycle}
             {...register('minutesAmount', { valueAsNumber: true })}
