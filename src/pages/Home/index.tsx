@@ -12,7 +12,7 @@ import {
   StopCountdownButton,
   TaskInput,
 } from './styles'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createContext } from 'react'
 import { differenceInSeconds } from 'date-fns'
 
 // Definindo o esquema de validação do form
@@ -32,6 +32,15 @@ interface Cycle {
   interruptedDate?: Date // Opcional
   finishedDate?: Date // Opcional
 }
+
+// Criando contexto da aplicação
+interface CyclesContextType {
+  activeCycle: Cycle | undefined
+}
+
+export const CycleContext = createContext({} as CyclesContextType)
+
+// Main da Aplicação
 
 export function Home() {
   const [cycles, setCycles] = useState<Cycle[]>([])
